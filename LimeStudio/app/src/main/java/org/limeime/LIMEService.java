@@ -83,6 +83,7 @@ import android.widget.TextView;
 
 import org.limeime.candidate.CandidateInInputViewContainer;
 import org.limeime.clipboard.ClipboardMonitor;
+import org.limeime.clipboard.ClipboardPaste;
 import org.limeime.clipboard.ClipboardSnapshot;
 import org.limeime.candidate.CandidateView;
 import org.limeime.data.ChineseSymbol;
@@ -905,7 +906,7 @@ public class LIMEService extends InputMethodService
     }
 
     /**
-     * Paste primary-clip text from the idle candidate-strip chip (URLs are sanitized).
+     * Paste from the idle candidate-strip chip (text, URL, or image via commitContent).
      */
     public void pasteFromClipboardChip() {
         ClipboardSnapshot snapshot = mClipboardSnapshot;
@@ -914,6 +915,21 @@ public class LIMEService extends InputMethodService
         }
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) {
+            return;
+        }
+        if (snapshot.getKind() == ClipboardSnapshot.Kind.IMAGE) {
+            if (snapshot.getContentUri() == null) {
+                return;
+            }
+            EditorInfo editorInfo = getCurrentInputEditorInfo();
+            if (!ClipboardPaste.pasteImage(ic, editorInfo, snapshot.getContentUri(), snapshot.getMimeType())) {
+                android.widget.Toast.makeText(
+                        this,
+                        getString(R.string.candidate_clipboard_image_unsupported),
+                        android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+            doVibrateSound(0);
             return;
         }
         String text = snapshot.getPasteText();

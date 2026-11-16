@@ -38,6 +38,7 @@
     <dimen name="candidate_number_font_size">14sp</dimen>
     <dimen name="candidate_expand_button_width">42sp</dimen>
     <dimen name="candidate_clipboard_chip_max_width">148dp</dimen>
+    <dimen name="candidate_clipboard_thumb_size">28dp</dimen>
     <!-- feat#N01: 1.5x the former 21sp tap target; height/style unchanged. -->
     <dimen name="candidate_dismiss_button_width">31.5sp</dimen>
     <dimen name="candidate_font_size">28sp</dimen>

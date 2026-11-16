@@ -1,10 +1,12 @@
 package org.limeime.clipboard;
 
+import android.net.Uri;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 /**
- * Immutable clipboard summary for the idle candidate-strip paste chip (phase A/B).
+ * Immutable clipboard summary for the idle candidate-strip paste chip.
  */
 public final class ClipboardSnapshot {
 
@@ -13,22 +15,40 @@ public final class ClipboardSnapshot {
         TEXT,
         URL,
         SENSITIVE,
-        /** Image / file URI without pasteable text (phase C+). */
-        NON_TEXT
+        IMAGE,
     }
 
-    public static final ClipboardSnapshot EMPTY = new ClipboardSnapshot(Kind.EMPTY, "", "");
+    public static final ClipboardSnapshot EMPTY =
+            new ClipboardSnapshot(Kind.EMPTY, "", "", null, null);
 
     private final Kind kind;
     @NonNull
     private final String displayLabel;
     @NonNull
     private final String pasteText;
+    @Nullable
+    private final Uri contentUri;
+    @Nullable
+    private final String mimeType;
 
-    public ClipboardSnapshot(Kind kind, @NonNull String displayLabel, @NonNull String pasteText) {
+    public ClipboardSnapshot(
+            @NonNull Kind kind,
+            @NonNull String displayLabel,
+            @NonNull String pasteText) {
+        this(kind, displayLabel, pasteText, null, null);
+    }
+
+    public ClipboardSnapshot(
+            @NonNull Kind kind,
+            @NonNull String displayLabel,
+            @NonNull String pasteText,
+            @Nullable Uri contentUri,
+            @Nullable String mimeType) {
         this.kind = kind;
         this.displayLabel = displayLabel;
         this.pasteText = pasteText;
+        this.contentUri = contentUri;
+        this.mimeType = mimeType;
     }
 
     public Kind getKind() {
@@ -45,8 +65,31 @@ public final class ClipboardSnapshot {
         return pasteText;
     }
 
+    @Nullable
+    public Uri getContentUri() {
+        return contentUri;
+    }
+
+    @Nullable
+    public String getMimeType() {
+        return mimeType;
+    }
+
     public boolean isPasteable() {
-        return kind == Kind.TEXT || kind == Kind.URL || kind == Kind.SENSITIVE;
+        switch (kind) {
+            case TEXT:
+            case URL:
+            case SENSITIVE:
+                return true;
+            case IMAGE:
+                return contentUri != null;
+            default:
+                return false;
+        }
+    }
+
+    public boolean showThumbnail() {
+        return kind == Kind.IMAGE && contentUri != null;
     }
 
     @Override
@@ -56,6 +99,8 @@ public final class ClipboardSnapshot {
         ClipboardSnapshot that = (ClipboardSnapshot) o;
         return kind == that.kind
                 && displayLabel.equals(that.displayLabel)
-                && pasteText.equals(that.pasteText);
+                && pasteText.equals(that.pasteText)
+                && (contentUri == null ? that.contentUri == null : contentUri.equals(that.contentUri))
+                && (mimeType == null ? that.mimeType == null : mimeType.equals(that.mimeType));
     }
 }

@@ -4,14 +4,16 @@ import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.net.Uri;
 import android.os.Build;
 import android.os.PersistableBundle;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 /**
- * Builds {@link ClipboardSnapshot} from the primary clip (text / URL only for phase A/B).
+ * Builds {@link ClipboardSnapshot} from the primary clip (text, URL, image).
  */
 public final class ClipboardInspector {
 
@@ -31,20 +33,17 @@ public final class ClipboardInspector {
             return ClipboardSnapshot.EMPTY;
         }
         ClipDescription description = clip.getDescription();
-        if (isSensitive(description)) {
-            CharSequence text = coercePrimaryText(context, clip);
-            if (text == null || text.toString().trim().isEmpty()) {
-                return ClipboardSnapshot.EMPTY;
-            }
-            String paste = text.toString();
-            String label = context.getString(org.limeime.R.string.candidate_clipboard_paste);
-            return new ClipboardSnapshot(ClipboardSnapshot.Kind.SENSITIVE, label, paste);
-        }
+        boolean sensitive = isSensitive(description);
+
         CharSequence text = coercePrimaryText(context, clip);
         if (text != null) {
             String raw = text.toString();
             String trimmed = raw.trim();
             if (!trimmed.isEmpty()) {
+                if (sensitive) {
+                    String label = context.getString(org.limeime.R.string.candidate_clipboard_paste);
+                    return new ClipboardSnapshot(ClipboardSnapshot.Kind.SENSITIVE, label, raw);
+                }
                 if (looksLikeUrl(trimmed)) {
                     String cleaned = UrlSanitizer.sanitize(trimmed);
                     return new ClipboardSnapshot(
@@ -58,11 +57,48 @@ public final class ClipboardInspector {
                         raw);
             }
         }
+
         ClipData.Item item = clip.getItemAt(0);
-        if (item.getUri() != null) {
-            return new ClipboardSnapshot(ClipboardSnapshot.Kind.NON_TEXT, "", "");
+        Uri uri = item.getUri();
+        if (uri != null) {
+            String mime = resolveImageMime(context, description, uri);
+            if (mime != null) {
+                String label = sensitive
+                        ? context.getString(org.limeime.R.string.candidate_clipboard_paste)
+                        : context.getString(org.limeime.R.string.candidate_clipboard_paste_image);
+                return new ClipboardSnapshot(
+                        ClipboardSnapshot.Kind.IMAGE,
+                        label,
+                        "",
+                        uri,
+                        mime);
+            }
         }
         return ClipboardSnapshot.EMPTY;
+    }
+
+    @Nullable
+    private static String resolveImageMime(
+            @NonNull Context context,
+            @Nullable ClipDescription description,
+            @NonNull Uri uri) {
+        if (description != null) {
+            for (int i = 0; i < description.getMimeTypeCount(); i++) {
+                String mime = description.getMimeType(i);
+                if (mime != null && mime.startsWith("image/")) {
+                    return mime;
+                }
+            }
+        }
+        try {
+            String type = context.getContentResolver().getType(uri);
+            if (type != null && type.startsWith("image/")) {
+                return type;
+            }
+        } catch (SecurityException ignored) {
+            return null;
+        }
+        return null;
     }
 
     private static boolean isSensitive(@Nullable ClipDescription description) {

@@ -25,6 +25,7 @@ package org.limeime.candidate;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.widget.ImageView;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -37,6 +38,7 @@ import android.widget.TextView;
 import org.limeime.LIMEService;
 import org.limeime.R;
 import org.limeime.clipboard.ClipboardSnapshot;
+import org.limeime.clipboard.ClipboardThumbnailLoader;
 import org.limeime.global.LIME;
 
 public class CandidateInInputViewContainer extends LinearLayout  implements View.OnClickListener {
@@ -47,8 +49,12 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
     private ImageButton mEmojiButton;
     private ImageButton mRightButton;
     private ImageButton mKeyboardButton;
-    private TextView mClipboardButton;
+    private View mClipboardChip;
+    private ImageView mClipboardThumb;
+    private TextView mClipboardLabel;
     private ClipboardSnapshot mClipboardSnapshot = ClipboardSnapshot.EMPTY;
+    private final ClipboardThumbnailLoader mClipboardThumbnailLoader = new ClipboardThumbnailLoader();
+    private int mClipboardThumbnailRequestId;
     private View mActionRow;
     private View mRightButtonParent;
     private CandidateView mCandidateView;
@@ -94,7 +100,9 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
             mEmojiButton = findViewById(R.id.candidate_emoji);
             mRightButton = findViewById(R.id.candidate_right);
             mKeyboardButton = findViewById(R.id.candidate_keyboard);
-            mClipboardButton = findViewById(R.id.candidate_clipboard);
+            mClipboardChip = findViewById(R.id.candidate_clipboard);
+            mClipboardThumb = findViewById(R.id.candidate_clipboard_thumb);
+            mClipboardLabel = findViewById(R.id.candidate_clipboard_label);
             if (mEmojiButton != null && mEmojiButton.getParent() instanceof View) {
                 mActionRow = (View) mEmojiButton.getParent();
             }
@@ -121,9 +129,9 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                     Log.w(TAG, "Keyboard button not found!");
                 }
             }
-            if (mClipboardButton != null) {
-                mClipboardButton.setOnClickListener(this);
-                mClipboardButton.setBackgroundColor(actionButtonBackgroundColor());
+            if (mClipboardChip != null) {
+                mClipboardChip.setOnClickListener(this);
+                mClipboardChip.setBackgroundColor(actionButtonBackgroundColor());
                 applyClipboardChipThemeColors();
             }
             mCandidateView = findViewById(R.id.candidatesView);
@@ -178,7 +186,39 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
 
     public void applyClipboardSnapshot(ClipboardSnapshot snapshot) {
         mClipboardSnapshot = snapshot != null ? snapshot : ClipboardSnapshot.EMPTY;
+        mClipboardThumbnailRequestId++;
+        clearClipboardThumbnail();
+        if (mClipboardSnapshot.showThumbnail() && mClipboardThumb != null) {
+            final int requestId = mClipboardThumbnailRequestId;
+            int sizePx = getResources().getDimensionPixelSize(R.dimen.candidate_clipboard_thumb_size);
+            mClipboardThumbnailLoader.load(
+                    getContext(),
+                    mClipboardSnapshot.getContentUri(),
+                    sizePx,
+                    requestId,
+                    (bitmap, id) -> {
+                        if (id != mClipboardThumbnailRequestId || mClipboardThumb == null) {
+                            return;
+                        }
+                        if (bitmap != null) {
+                            mClipboardThumb.setImageBitmap(bitmap);
+                            mClipboardThumb.setVisibility(VISIBLE);
+                        } else {
+                            mClipboardThumb.setImageResource(R.drawable.ic_description_24);
+                            mClipboardThumb.setVisibility(VISIBLE);
+                        }
+                        requestLayout();
+                        updateCandidateViewWidthConstraint();
+                    });
+        }
         requestLayout();
+    }
+
+    private void clearClipboardThumbnail() {
+        if (mClipboardThumb != null) {
+            mClipboardThumb.setImageDrawable(null);
+            mClipboardThumb.setVisibility(View.GONE);
+        }
     }
 
     // @Override
@@ -322,47 +362,62 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
     }
 
     private void updateClipboardChipVisibility(boolean showIdleTools) {
-        if (mClipboardButton == null) {
+        if (mClipboardChip == null) {
             return;
         }
         boolean show = showIdleTools
                 && mClipboardSnapshot != null
                 && mClipboardSnapshot.isPasteable();
         if (show) {
-            mClipboardButton.setVisibility(View.VISIBLE);
-            mClipboardButton.setText(mClipboardSnapshot.getDisplayLabel());
+            mClipboardChip.setVisibility(View.VISIBLE);
+            if (mClipboardLabel != null) {
+                boolean showLabel = mClipboardSnapshot.getKind() != ClipboardSnapshot.Kind.IMAGE
+                        || mClipboardThumb == null
+                        || mClipboardThumb.getVisibility() != VISIBLE;
+                if (showLabel) {
+                    mClipboardLabel.setText(mClipboardSnapshot.getDisplayLabel());
+                    mClipboardLabel.setVisibility(VISIBLE);
+                } else {
+                    mClipboardLabel.setVisibility(GONE);
+                }
+            }
             applyClipboardChipThemeColors();
             if (mClipboardSnapshot.getKind() == ClipboardSnapshot.Kind.URL) {
-                mClipboardButton.setContentDescription(
+                mClipboardChip.setContentDescription(
                         getContext().getString(R.string.candidate_clipboard_paste_url));
+            } else if (mClipboardSnapshot.getKind() == ClipboardSnapshot.Kind.IMAGE) {
+                mClipboardChip.setContentDescription(
+                        getContext().getString(R.string.candidate_clipboard_paste_image));
             } else {
-                mClipboardButton.setContentDescription(
+                mClipboardChip.setContentDescription(
                         getContext().getString(R.string.candidate_clipboard_paste_text));
             }
         } else {
-            mClipboardButton.setVisibility(View.GONE);
+            mClipboardChip.setVisibility(View.GONE);
         }
     }
 
     private void applyClipboardChipThemeColors() {
-        if (mClipboardButton == null || mCandidateView == null) {
+        if (mCandidateView == null) {
             return;
         }
-        mClipboardButton.setTextColor(mCandidateView.mColorNormalText);
+        if (mClipboardLabel != null) {
+            mClipboardLabel.setTextColor(mCandidateView.mColorNormalText);
+        }
     }
 
     private int clipboardChipWidthForLayout() {
-        if (mClipboardButton == null || mClipboardButton.getVisibility() != View.VISIBLE) {
+        if (mClipboardChip == null || mClipboardChip.getVisibility() != View.VISIBLE) {
             return 0;
         }
-        int measured = mClipboardButton.getWidth();
+        int measured = mClipboardChip.getWidth();
         if (measured > 0) {
             return measured;
         }
-        mClipboardButton.measure(
+        mClipboardChip.measure(
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-        measured = mClipboardButton.getMeasuredWidth();
+        measured = mClipboardChip.getMeasuredWidth();
         if (measured > 0) {
             return measured;
         }
@@ -424,7 +479,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                     int dismissWidth = getResources().getDimensionPixelSize(R.dimen.candidate_dismiss_button_width);
                     boolean dismissVisible = mDismissButton != null && mDismissButton.getVisibility() == View.VISIBLE;
                     boolean emojiVisible = mEmojiButton != null && mEmojiButton.getVisibility() == View.VISIBLE;
-                    boolean clipboardVisible = mClipboardButton != null && mClipboardButton.getVisibility() == View.VISIBLE;
+                    boolean clipboardVisible = mClipboardChip != null && mClipboardChip.getVisibility() == View.VISIBLE;
                     boolean keyboardVisible = mKeyboardButton != null && mKeyboardButton.getVisibility() == View.VISIBLE;
                     boolean rightVisible = mRightButton != null && mRightButton.getVisibility() == View.VISIBLE;
                     
@@ -523,7 +578,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
             if (mService != null) {
                 mService.onKey(LIME.KEYCODE_EMOJI_PANEL, null, 0, 0);
             }
-        } else if (v == mClipboardButton) {
+        } else if (v == mClipboardChip) {
             if (mService != null) {
                 mService.pasteFromClipboardChip();
             }
