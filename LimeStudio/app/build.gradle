@@ -48,7 +48,7 @@ android {
     }
     compileSdkVersion 37
     defaultConfig {
-        applicationId "org.limeime"
+        applicationId "dev.ben2613fork.limeime"
 
         minSdkVersion 25
         targetSdkVersion 37
