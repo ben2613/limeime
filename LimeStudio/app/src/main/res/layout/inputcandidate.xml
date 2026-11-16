@@ -82,7 +82,6 @@
             android:textSize="@dimen/candidate_number_font_size"
             android:paddingStart="4dp"
             android:paddingEnd="4dp"
-            android:textColor="@color/color_black"
             android:visibility="gone" />
 
         <org.limeime.candidate.CandidateView

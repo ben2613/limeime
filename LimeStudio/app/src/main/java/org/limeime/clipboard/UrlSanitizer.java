@@ -13,14 +13,43 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Strips common tracking query parameters from URLs (YouTube, X/Twitter, generic).
+ * Strips common tracking query parameters from URLs.
+ *
+ * <p>Host-specific lists avoid stripping {@code t=} on YouTube (playback offset) while still
+ * removing X/Twitter share tokens ({@code a=}, {@code t=}, {@code s=} since late 2026 {@code a}
+ * often replaces {@code t=} on share URLs).
  */
 public final class UrlSanitizer {
 
-    private static final Set<String> GENERIC_TRACKING = new HashSet<>(Arrays.asList(
+    /** Analytics / ads click IDs — safe on any host. */
+    private static final Set<String> GLOBAL_STRIP = new HashSet<>(Arrays.asList(
             "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id",
             "fbclid", "gclid", "gclsrc", "mc_cid", "mc_eid", "igshid", "mkt_tok",
-            "si", "feature", "ref_src", "ref_url", "ref", "s", "t"));
+            "feature", "ref_url", "ref"));
+
+    /** X / Twitter share & attribution (do not add {@code t}/{@code s} globally). */
+    private static final Set<String> X_STRIP = new HashSet<>(Arrays.asList(
+            "a", "s", "t", "twclid", "ref_src", "refsrc", "cn", "src", "iid", "ntref", "ft",
+            "lang", "vertical", "f", "p", "rd", "rnd", "cxt", "bp"));
+
+    private static final Set<String> YOUTUBE_STRIP = new HashSet<>(Arrays.asList(
+            "si", "pp", "embed"));
+
+    private static final Set<String> FACEBOOK_STRIP = new HashSet<>(Arrays.asList(
+            "mibextid", "__cft__", "__tn__", "eid", "hc_ref", "refid"));
+
+    private static final Set<String> INSTAGRAM_STRIP = new HashSet<>(Arrays.asList(
+            "igsh", "igshid"));
+
+    private static final Set<String> TIKTOK_STRIP = new HashSet<>(Arrays.asList(
+            "is_from_webapp", "is_copy_url", "share_id", "sender_device", "sender_web_id",
+            "_r", "_t", "_d"));
+
+    private static final Set<String> LINKEDIN_STRIP = new HashSet<>(Arrays.asList(
+            "trk", "trkinfo", "li_fat_id", "lipi", "originalsubdomain"));
+
+    private static final Set<String> REDDIT_STRIP = new HashSet<>(Arrays.asList(
+            "share_id", "rdt"));
 
     private UrlSanitizer() {
     }
@@ -51,7 +80,7 @@ public final class UrlSanitizer {
             }
             int eq = part.indexOf('=');
             String name = (eq >= 0 ? part.substring(0, eq) : part).toLowerCase(Locale.US);
-            if (stripNames.contains(name)) {
+            if (shouldStrip(name, stripNames)) {
                 continue;
             }
             kept.add(part);
@@ -70,6 +99,17 @@ public final class UrlSanitizer {
         } catch (URISyntaxException e) {
             return trimmed;
         }
+    }
+
+    /** Also strips keys prefixed with {@code utm_} or {@code __} (session blobs). */
+    static boolean shouldStrip(@NonNull String name, @NonNull Set<String> stripNames) {
+        if (stripNames.contains(name)) {
+            return true;
+        }
+        if (name.startsWith("utm_")) {
+            return true;
+        }
+        return name.startsWith("__");
     }
 
     @NonNull
@@ -109,14 +149,28 @@ public final class UrlSanitizer {
     }
 
     @NonNull
-    private static Set<String> paramsToStrip(@NonNull String host) {
-        Set<String> names = new HashSet<>(GENERIC_TRACKING);
+    static Set<String> paramsToStrip(@NonNull String host) {
+        Set<String> names = new HashSet<>(GLOBAL_STRIP);
         if (isYouTubeHost(host)) {
-            names.add("pp");
-            names.add("embed");
+            names.addAll(YOUTUBE_STRIP);
         }
         if (isXHost(host)) {
-            names.add("twclid");
+            names.addAll(X_STRIP);
+        }
+        if (isFacebookHost(host)) {
+            names.addAll(FACEBOOK_STRIP);
+        }
+        if (isInstagramHost(host)) {
+            names.addAll(INSTAGRAM_STRIP);
+        }
+        if (isTikTokHost(host)) {
+            names.addAll(TIKTOK_STRIP);
+        }
+        if (isLinkedInHost(host)) {
+            names.addAll(LINKEDIN_STRIP);
+        }
+        if (isRedditHost(host)) {
+            names.addAll(REDDIT_STRIP);
         }
         return names;
     }
@@ -135,6 +189,36 @@ public final class UrlSanitizer {
                 || host.endsWith(".x.com")
                 || host.equals("twitter.com")
                 || host.endsWith(".twitter.com")
-                || host.equals("mobile.twitter.com");
+                || host.equals("mobile.twitter.com")
+                || host.equals("t.co");
+    }
+
+    private static boolean isFacebookHost(@NonNull String host) {
+        return host.equals("facebook.com")
+                || host.endsWith(".facebook.com")
+                || host.equals("fb.com")
+                || host.endsWith(".fb.com")
+                || host.equals("fb.watch");
+    }
+
+    private static boolean isInstagramHost(@NonNull String host) {
+        return host.equals("instagram.com") || host.endsWith(".instagram.com");
+    }
+
+    private static boolean isTikTokHost(@NonNull String host) {
+        return host.equals("tiktok.com")
+                || host.endsWith(".tiktok.com")
+                || host.equals("vm.tiktok.com");
+    }
+
+    private static boolean isLinkedInHost(@NonNull String host) {
+        return host.equals("linkedin.com") || host.endsWith(".linkedin.com");
+    }
+
+    private static boolean isRedditHost(@NonNull String host) {
+        return host.equals("reddit.com")
+                || host.endsWith(".reddit.com")
+                || host.equals("old.reddit.com")
+                || host.equals("www.reddit.com");
     }
 }

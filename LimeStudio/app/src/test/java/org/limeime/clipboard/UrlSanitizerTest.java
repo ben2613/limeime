@@ -25,6 +25,21 @@ public class UrlSanitizerTest {
     }
 
     @Test
+    public void stripsXShareTokenA() {
+        String in = "https://x.com/handle/status/1234567890?s=46&a=AbCdEf-xyz";
+        String out = UrlSanitizer.sanitize(in);
+        assertEquals("https://x.com/handle/status/1234567890", out);
+    }
+
+    @Test
+    public void preservesYouTubePlaybackTimeT() {
+        String in = "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s&si=abc";
+        String out = UrlSanitizer.sanitize(in);
+        assertTrue(out.contains("t=42s"));
+        assertFalse(out.contains("si=abc"));
+    }
+
+    @Test
     public void stripsGenericUtm() {
         String in = "https://example.com/path?utm_source=x&keep=yes";
         String out = UrlSanitizer.sanitize(in);

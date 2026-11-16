@@ -124,6 +124,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
             if (mClipboardButton != null) {
                 mClipboardButton.setOnClickListener(this);
                 mClipboardButton.setBackgroundColor(actionButtonBackgroundColor());
+                applyClipboardChipThemeColors();
             }
             mCandidateView = findViewById(R.id.candidatesView);
             //View mKeyboardView = findViewById(R.id.keyboard);
@@ -330,6 +331,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
         if (show) {
             mClipboardButton.setVisibility(View.VISIBLE);
             mClipboardButton.setText(mClipboardSnapshot.getDisplayLabel());
+            applyClipboardChipThemeColors();
             if (mClipboardSnapshot.getKind() == ClipboardSnapshot.Kind.URL) {
                 mClipboardButton.setContentDescription(
                         getContext().getString(R.string.candidate_clipboard_paste_url));
@@ -340,6 +342,13 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
         } else {
             mClipboardButton.setVisibility(View.GONE);
         }
+    }
+
+    private void applyClipboardChipThemeColors() {
+        if (mClipboardButton == null || mCandidateView == null) {
+            return;
+        }
+        mClipboardButton.setTextColor(mCandidateView.mColorNormalText);
     }
 
     private int clipboardChipWidthForLayout() {
