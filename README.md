@@ -56,7 +56,8 @@ LIME 的輸入法碼表由 GitHub 雲端下載；GitHub 會將下載導向使用
 
 ### 架構
 
-- [LimeIME 架構總覽](docs/LIMEIME_ARCHITECTURE.md) — 整體架構與模組關係
+- [Android IME 圖解入門](docs/ANDROID_IME_GUIDE.md) — Android 輸入法框架與 LimeIME 對照（含 Mermaid 圖）
+- [LimeIME 架構總覽](docs/LIMEIME_ARCHITECTURE.md) — 整體架構與模組
 - [UI 架構（MVC）](docs/UI_ARCHITECTURE.md) — 介面層的 MVC 設計
 - [IMService 規格](docs/IM_SERVICE.md) — 輸入法服務核心規格
 
