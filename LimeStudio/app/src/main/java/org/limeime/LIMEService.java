@@ -82,6 +82,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import org.limeime.candidate.CandidateInInputViewContainer;
+import org.limeime.clipboard.ClipboardMonitor;
+import org.limeime.clipboard.ClipboardSnapshot;
 import org.limeime.candidate.CandidateView;
 import org.limeime.data.ChineseSymbol;
 import org.limeime.data.ImConfig;
@@ -198,6 +200,8 @@ public class LIMEService extends InputMethodService
     public static final int THREAD_YIELD_DELAY_MS = 0;
     private LIMEKeyboardView mInputView = null;
     private CandidateInInputViewContainer mCandidateInInputView = null;//Jeremy'12,5,3
+    private ClipboardMonitor mClipboardMonitor;
+    private ClipboardSnapshot mClipboardSnapshot = ClipboardSnapshot.EMPTY;
     //private final boolean mFixedCandidateViewOn = true; //Jeremy'12,5,3 - Always true, kept for backward compatibility
     private CandidateView mCandidateView = null;
     private CandidateView mCandidateViewInInputView = null;
@@ -476,6 +480,8 @@ public class LIMEService extends InputMethodService
         // Register receiver for voice input results
         registerVoiceInputReceiver();
 
+        mClipboardMonitor = new ClipboardMonitor(this);
+
     }
 
 
@@ -662,6 +668,7 @@ public class LIMEService extends InputMethodService
         if (!mIsVoiceInputActive) {
             unregisterVoiceInputReceiver();
         }
+        stopClipboardMonitorForInputSession();
         super.onFinishInput();
 
         // mFixedCandidateViewOn is always true, so this branch is never executed
@@ -872,6 +879,51 @@ public class LIMEService extends InputMethodService
 
         // Issue #46: Tint nav bar to match active keyboard theme (re-apply in case theme changed)
         applyNavigationBarTheme();
+
+        startClipboardMonitorForInputSession();
+    }
+
+    private void startClipboardMonitorForInputSession() {
+        if (mClipboardMonitor == null) {
+            mClipboardMonitor = new ClipboardMonitor(this);
+        }
+        mClipboardMonitor.start(this::applyClipboardSnapshot);
+    }
+
+    private void stopClipboardMonitorForInputSession() {
+        if (mClipboardMonitor != null) {
+            mClipboardMonitor.stop();
+        }
+        applyClipboardSnapshot(ClipboardSnapshot.EMPTY);
+    }
+
+    private void applyClipboardSnapshot(ClipboardSnapshot snapshot) {
+        mClipboardSnapshot = snapshot != null ? snapshot : ClipboardSnapshot.EMPTY;
+        if (mCandidateInInputView != null) {
+            mCandidateInInputView.applyClipboardSnapshot(mClipboardSnapshot);
+        }
+    }
+
+    /**
+     * Paste primary-clip text from the idle candidate-strip chip (URLs are sanitized).
+     */
+    public void pasteFromClipboardChip() {
+        ClipboardSnapshot snapshot = mClipboardSnapshot;
+        if (snapshot == null || !snapshot.isPasteable()) {
+            return;
+        }
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) {
+            return;
+        }
+        String text = snapshot.getPasteText();
+        if (text.isEmpty()) {
+            return;
+        }
+        ic.beginBatchEdit();
+        ic.commitText(text, 1);
+        ic.endBatchEdit();
+        doVibrateSound(0);
     }
 
     /**
@@ -6349,6 +6401,7 @@ public class LIMEService extends InputMethodService
         super.onFinishInputView(finishingInput);
         cancelInlineDictation();
         resetEmojiKeyboardState();
+        stopClipboardMonitorForInputSession();
         hideCandidateView(); //Jeremy '12,5,7 hideCandiate when inputview is closed but not yet leave the original field (onfinishinput() will not called).
     }
 

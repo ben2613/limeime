@@ -32,9 +32,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import org.limeime.LIMEService;
 import org.limeime.R;
+import org.limeime.clipboard.ClipboardSnapshot;
 import org.limeime.global.LIME;
 
 public class CandidateInInputViewContainer extends LinearLayout  implements View.OnClickListener {
@@ -45,6 +47,8 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
     private ImageButton mEmojiButton;
     private ImageButton mRightButton;
     private ImageButton mKeyboardButton;
+    private TextView mClipboardButton;
+    private ClipboardSnapshot mClipboardSnapshot = ClipboardSnapshot.EMPTY;
     private View mActionRow;
     private View mRightButtonParent;
     private CandidateView mCandidateView;
@@ -90,6 +94,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
             mEmojiButton = findViewById(R.id.candidate_emoji);
             mRightButton = findViewById(R.id.candidate_right);
             mKeyboardButton = findViewById(R.id.candidate_keyboard);
+            mClipboardButton = findViewById(R.id.candidate_clipboard);
             if (mEmojiButton != null && mEmojiButton.getParent() instanceof View) {
                 mActionRow = (View) mEmojiButton.getParent();
             }
@@ -115,6 +120,10 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                 if (DEBUG) {
                     Log.w(TAG, "Keyboard button not found!");
                 }
+            }
+            if (mClipboardButton != null) {
+                mClipboardButton.setOnClickListener(this);
+                mClipboardButton.setBackgroundColor(actionButtonBackgroundColor());
             }
             mCandidateView = findViewById(R.id.candidatesView);
             //View mKeyboardView = findViewById(R.id.keyboard);
@@ -164,6 +173,11 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
     
     public void setService(LIMEService service) {
         mService = service;
+    }
+
+    public void applyClipboardSnapshot(ClipboardSnapshot snapshot) {
+        mClipboardSnapshot = snapshot != null ? snapshot : ClipboardSnapshot.EMPTY;
+        requestLayout();
     }
 
     // @Override
@@ -223,6 +237,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
             if (mEmojiButton != null) {
                 mEmojiButton.setVisibility(showIdleTools ? View.VISIBLE : View.GONE);
             }
+            updateClipboardChipVisibility(showIdleTools);
 
             // Update keyboard button visibility
             if (mKeyboardButton != null) {
@@ -304,6 +319,46 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
     private boolean isComposingOrSearching() {
         return mService != null && mService.isComposingOrSearchingCandidates();
     }
+
+    private void updateClipboardChipVisibility(boolean showIdleTools) {
+        if (mClipboardButton == null) {
+            return;
+        }
+        boolean show = showIdleTools
+                && mClipboardSnapshot != null
+                && mClipboardSnapshot.isPasteable();
+        if (show) {
+            mClipboardButton.setVisibility(View.VISIBLE);
+            mClipboardButton.setText(mClipboardSnapshot.getDisplayLabel());
+            if (mClipboardSnapshot.getKind() == ClipboardSnapshot.Kind.URL) {
+                mClipboardButton.setContentDescription(
+                        getContext().getString(R.string.candidate_clipboard_paste_url));
+            } else {
+                mClipboardButton.setContentDescription(
+                        getContext().getString(R.string.candidate_clipboard_paste_text));
+            }
+        } else {
+            mClipboardButton.setVisibility(View.GONE);
+        }
+    }
+
+    private int clipboardChipWidthForLayout() {
+        if (mClipboardButton == null || mClipboardButton.getVisibility() != View.VISIBLE) {
+            return 0;
+        }
+        int measured = mClipboardButton.getWidth();
+        if (measured > 0) {
+            return measured;
+        }
+        mClipboardButton.measure(
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        measured = mClipboardButton.getMeasuredWidth();
+        if (measured > 0) {
+            return measured;
+        }
+        return getResources().getDimensionPixelSize(R.dimen.candidate_clipboard_chip_max_width);
+    }
     
     /**
      * Update CandidateView width constraint to leave space for visible buttons.
@@ -343,6 +398,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                 if (mEmojiButton != null) {
                     mEmojiButton.setVisibility(showIdleTools ? View.VISIBLE : View.GONE);
                 }
+                updateClipboardChipVisibility(showIdleTools);
                 if (mRightButton != null) {
                     mRightButton.setVisibility((showIdleTools || showActiveChrome) ? View.VISIBLE : View.GONE);
                 }
@@ -359,6 +415,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                     int dismissWidth = getResources().getDimensionPixelSize(R.dimen.candidate_dismiss_button_width);
                     boolean dismissVisible = mDismissButton != null && mDismissButton.getVisibility() == View.VISIBLE;
                     boolean emojiVisible = mEmojiButton != null && mEmojiButton.getVisibility() == View.VISIBLE;
+                    boolean clipboardVisible = mClipboardButton != null && mClipboardButton.getVisibility() == View.VISIBLE;
                     boolean keyboardVisible = mKeyboardButton != null && mKeyboardButton.getVisibility() == View.VISIBLE;
                     boolean rightVisible = mRightButton != null && mRightButton.getVisibility() == View.VISIBLE;
                     
@@ -376,6 +433,9 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                     }
                     if (emojiVisible) {
                         buttonsWidth += buttonWidth;
+                    }
+                    if (clipboardVisible) {
+                        buttonsWidth += clipboardChipWidthForLayout();
                     }
                     if (keyboardVisible) {
                         buttonsWidth += buttonWidth;
@@ -453,6 +513,10 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
         } else if (v == mEmojiButton) {
             if (mService != null) {
                 mService.onKey(LIME.KEYCODE_EMOJI_PANEL, null, 0, 0);
+            }
+        } else if (v == mClipboardButton) {
+            if (mService != null) {
+                mService.pasteFromClipboardChip();
             }
         } else if (v == mKeyboardButton) {
             // Restore keyboard view when keyboard button is clicked
