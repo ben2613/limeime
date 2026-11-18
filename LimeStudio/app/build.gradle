@@ -48,12 +48,12 @@ android {
     }
     compileSdkVersion 37
     defaultConfig {
-        applicationId "org.limeime"
+        applicationId "dev.ben2613fork.limeime"
 
         minSdkVersion 25
         targetSdkVersion 37
-        versionCode 202661380
-        versionName 'v6.1.38'
+        versionCode 20260001
+        versionName 'v6.1.38+ben2613.1'
 
         //multiDexEnabled = true
 

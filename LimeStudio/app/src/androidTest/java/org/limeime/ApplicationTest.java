@@ -70,10 +70,10 @@ public class ApplicationTest {
         // Verify that the package name is correct
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
         String packageName = appContext.getPackageName();
-        // Must match applicationId in app/build.gradle (currently org.limeime).
+        // Must match applicationId in app/build.gradle (currently dev.ben2613fork.limeime).
         // BuildConfig isn't generated for this module (buildConfig feature is off), so the
         // value is asserted as a literal — update both together if applicationId changes.
-        assertEquals("org.limeime", packageName);
+        assertEquals("dev.ben2613fork.limeime", packageName);
     }
 
     @Test
