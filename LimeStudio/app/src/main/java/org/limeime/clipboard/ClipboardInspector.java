@@ -17,7 +17,7 @@ import androidx.core.content.ContextCompat;
  */
 public final class ClipboardInspector {
 
-    static final int LABEL_MAX_LENGTH = 32;
+    static final int LABEL_MAX_LENGTH = 20;
 
     private ClipboardInspector() {
     }

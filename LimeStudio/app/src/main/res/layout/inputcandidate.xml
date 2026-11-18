@@ -104,8 +104,6 @@
             android:id="@+id/candidate_clipboard_fixupx"
             android:layout_width="wrap_content"
             android:layout_height="fill_parent"
-            android:minWidth="@dimen/candidate_expand_button_width"
-            android:maxWidth="@dimen/candidate_clipboard_chip_max_width"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:clickable="true"

@@ -417,11 +417,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
         if (show) {
             mClipboardFixupxChip.setVisibility(View.VISIBLE);
             if (mClipboardFixupxLabel != null) {
-                String alt = mClipboardSnapshot.getAlternatePasteText();
-                mClipboardFixupxLabel.setText(
-                        alt != null
-                                ? org.limeime.clipboard.ClipboardInspector.ellipsize(alt)
-                                : "");
+                mClipboardFixupxLabel.setText(R.string.candidate_clipboard_fixupx_label);
             }
             mClipboardFixupxChip.setContentDescription(
                     getContext().getString(R.string.candidate_clipboard_paste_fixupx));

@@ -16,7 +16,7 @@ public class ClipboardInspectorTest {
     @Test
     public void ellipsizeTruncates() {
         String longText = "abcdefghijklmnopqrstuvwxyz0123456789";
-        assertEquals(32, ClipboardInspector.ellipsize(longText).length());
+        assertEquals(20, ClipboardInspector.ellipsize(longText).length());
         assertTrue(ClipboardInspector.ellipsize(longText).endsWith("…"));
     }
 
