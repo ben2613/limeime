@@ -909,6 +909,14 @@ public class LIMEService extends InputMethodService
      * Paste from the idle candidate-strip chip (text, URL, or image via commitContent).
      */
     public void pasteFromClipboardChip() {
+        pasteClipboardText(false);
+    }
+
+    public void pasteFromClipboardFixupxChip() {
+        pasteClipboardText(true);
+    }
+
+    private void pasteClipboardText(boolean alternate) {
         ClipboardSnapshot snapshot = mClipboardSnapshot;
         if (snapshot == null || !snapshot.isPasteable()) {
             return;
@@ -932,8 +940,8 @@ public class LIMEService extends InputMethodService
             doVibrateSound(0);
             return;
         }
-        String text = snapshot.getPasteText();
-        if (text.isEmpty()) {
+        String text = alternate ? snapshot.getAlternatePasteText() : snapshot.getPasteText();
+        if (text == null || text.isEmpty()) {
             return;
         }
         ic.beginBatchEdit();

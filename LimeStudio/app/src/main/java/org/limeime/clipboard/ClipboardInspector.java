@@ -46,10 +46,14 @@ public final class ClipboardInspector {
                 }
                 if (looksLikeUrl(trimmed)) {
                     String cleaned = UrlSanitizer.sanitize(trimmed);
+                    String fixupx = UrlSanitizer.toFixupXContentUrl(trimmed);
                     return new ClipboardSnapshot(
                             ClipboardSnapshot.Kind.URL,
                             ellipsize(cleaned),
-                            cleaned);
+                            cleaned,
+                            null,
+                            null,
+                            fixupx);
                 }
                 return new ClipboardSnapshot(
                         ClipboardSnapshot.Kind.TEXT,
@@ -133,7 +137,7 @@ public final class ClipboardInspector {
     }
 
     @NonNull
-    static String ellipsize(@NonNull String value) {
+    public static String ellipsize(@NonNull String value) {
         if (value.length() <= LABEL_MAX_LENGTH) {
             return value;
         }

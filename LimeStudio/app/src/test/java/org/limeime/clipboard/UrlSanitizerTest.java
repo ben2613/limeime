@@ -50,4 +50,17 @@ public class UrlSanitizerTest {
     public void nonUrlPassthrough() {
         assertEquals("hello", UrlSanitizer.sanitize("hello"));
     }
+
+    @Test
+    public void fixupxRewritesXContentUrl() {
+        String in = "https://x.com/handle/status/1234567890?s=46&a=AbCdEf-xyz";
+        String out = UrlSanitizer.toFixupXContentUrl(in);
+        assertEquals("https://fixupx.com/handle/status/1234567890", out);
+    }
+
+    @Test
+    public void fixupxNullForNonXContent() {
+        assertEquals(null, UrlSanitizer.toFixupXContentUrl("https://youtu.be/abc"));
+        assertEquals(null, UrlSanitizer.toFixupXContentUrl("https://t.co/xyz"));
+    }
 }

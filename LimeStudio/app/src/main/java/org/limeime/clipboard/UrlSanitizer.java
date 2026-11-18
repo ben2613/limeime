@@ -55,6 +55,33 @@ public final class UrlSanitizer {
     }
 
     /**
+     * Sanitized x.com / twitter.com status URL with host {@code fixupx.com}, or {@code null} if not applicable.
+     */
+    @Nullable
+    public static String toFixupXContentUrl(@NonNull String input) {
+        String cleaned = sanitize(input);
+        URI uri = parseHttpUri(cleaned);
+        if (uri == null || uri.getHost() == null) {
+            return null;
+        }
+        String host = uri.getHost().toLowerCase(Locale.US);
+        if (!isXContentHost(host)) {
+            return null;
+        }
+        try {
+            URI rebuilt = new URI(
+                    uri.getScheme(),
+                    "fixupx.com",
+                    uri.getPath(),
+                    uri.getQuery(),
+                    uri.getFragment());
+            return rebuilt.toString();
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+
+    /**
      * Returns a cleaner URL when the input looks like http(s); otherwise returns input unchanged.
      */
     @NonNull
@@ -185,12 +212,15 @@ public final class UrlSanitizer {
     }
 
     private static boolean isXHost(@NonNull String host) {
+        return isXContentHost(host) || host.equals("t.co");
+    }
+
+    private static boolean isXContentHost(@NonNull String host) {
         return host.equals("x.com")
                 || host.endsWith(".x.com")
                 || host.equals("twitter.com")
                 || host.endsWith(".twitter.com")
-                || host.equals("mobile.twitter.com")
-                || host.equals("t.co");
+                || host.equals("mobile.twitter.com");
     }
 
     private static boolean isFacebookHost(@NonNull String host) {

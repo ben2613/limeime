@@ -50,8 +50,10 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
     private ImageButton mRightButton;
     private ImageButton mKeyboardButton;
     private View mClipboardChip;
+    private View mClipboardFixupxChip;
     private ImageView mClipboardThumb;
     private TextView mClipboardLabel;
+    private TextView mClipboardFixupxLabel;
     private ClipboardSnapshot mClipboardSnapshot = ClipboardSnapshot.EMPTY;
     private final ClipboardThumbnailLoader mClipboardThumbnailLoader = new ClipboardThumbnailLoader();
     private int mClipboardThumbnailRequestId;
@@ -101,8 +103,10 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
             mRightButton = findViewById(R.id.candidate_right);
             mKeyboardButton = findViewById(R.id.candidate_keyboard);
             mClipboardChip = findViewById(R.id.candidate_clipboard);
+            mClipboardFixupxChip = findViewById(R.id.candidate_clipboard_fixupx);
             mClipboardThumb = findViewById(R.id.candidate_clipboard_thumb);
             mClipboardLabel = findViewById(R.id.candidate_clipboard_label);
+            mClipboardFixupxLabel = findViewById(R.id.candidate_clipboard_fixupx_label);
             if (mEmojiButton != null && mEmojiButton.getParent() instanceof View) {
                 mActionRow = (View) mEmojiButton.getParent();
             }
@@ -132,8 +136,12 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
             if (mClipboardChip != null) {
                 mClipboardChip.setOnClickListener(this);
                 mClipboardChip.setBackgroundColor(actionButtonBackgroundColor());
-                applyClipboardChipThemeColors();
             }
+            if (mClipboardFixupxChip != null) {
+                mClipboardFixupxChip.setOnClickListener(this);
+                mClipboardFixupxChip.setBackgroundColor(actionButtonBackgroundColor());
+            }
+            applyClipboardChipThemeColors();
             mCandidateView = findViewById(R.id.candidatesView);
             //View mKeyboardView = findViewById(R.id.keyboard);
 
@@ -279,6 +287,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                 mEmojiButton.setVisibility(showIdleTools ? View.VISIBLE : View.GONE);
             }
             updateClipboardChipVisibility(showIdleTools);
+            updateClipboardFixupxChipVisibility(showIdleTools);
 
             // Update keyboard button visibility
             if (mKeyboardButton != null) {
@@ -397,6 +406,31 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
         }
     }
 
+    private void updateClipboardFixupxChipVisibility(boolean showIdleTools) {
+        if (mClipboardFixupxChip == null) {
+            return;
+        }
+        boolean show = showIdleTools
+                && mClipboardSnapshot != null
+                && mClipboardSnapshot.getKind() == ClipboardSnapshot.Kind.URL
+                && mClipboardSnapshot.hasAlternatePaste();
+        if (show) {
+            mClipboardFixupxChip.setVisibility(View.VISIBLE);
+            if (mClipboardFixupxLabel != null) {
+                String alt = mClipboardSnapshot.getAlternatePasteText();
+                mClipboardFixupxLabel.setText(
+                        alt != null
+                                ? org.limeime.clipboard.ClipboardInspector.ellipsize(alt)
+                                : "");
+            }
+            mClipboardFixupxChip.setContentDescription(
+                    getContext().getString(R.string.candidate_clipboard_paste_fixupx));
+            applyClipboardChipThemeColors();
+        } else {
+            mClipboardFixupxChip.setVisibility(View.GONE);
+        }
+    }
+
     private void applyClipboardChipThemeColors() {
         if (mCandidateView == null) {
             return;
@@ -404,20 +438,23 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
         if (mClipboardLabel != null) {
             mClipboardLabel.setTextColor(mCandidateView.mColorNormalText);
         }
+        if (mClipboardFixupxLabel != null) {
+            mClipboardFixupxLabel.setTextColor(mCandidateView.mColorNormalText);
+        }
     }
 
-    private int clipboardChipWidthForLayout() {
-        if (mClipboardChip == null || mClipboardChip.getVisibility() != View.VISIBLE) {
+    private int clipboardChipWidthForLayout(View chip) {
+        if (chip == null || chip.getVisibility() != View.VISIBLE) {
             return 0;
         }
-        int measured = mClipboardChip.getWidth();
+        int measured = chip.getWidth();
         if (measured > 0) {
             return measured;
         }
-        mClipboardChip.measure(
+        chip.measure(
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
-        measured = mClipboardChip.getMeasuredWidth();
+        measured = chip.getMeasuredWidth();
         if (measured > 0) {
             return measured;
         }
@@ -463,6 +500,7 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                     mEmojiButton.setVisibility(showIdleTools ? View.VISIBLE : View.GONE);
                 }
                 updateClipboardChipVisibility(showIdleTools);
+                updateClipboardFixupxChipVisibility(showIdleTools);
                 if (mRightButton != null) {
                     mRightButton.setVisibility((showIdleTools || showActiveChrome) ? View.VISIBLE : View.GONE);
                 }
@@ -480,6 +518,8 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                     boolean dismissVisible = mDismissButton != null && mDismissButton.getVisibility() == View.VISIBLE;
                     boolean emojiVisible = mEmojiButton != null && mEmojiButton.getVisibility() == View.VISIBLE;
                     boolean clipboardVisible = mClipboardChip != null && mClipboardChip.getVisibility() == View.VISIBLE;
+                    boolean clipboardFixupxVisible = mClipboardFixupxChip != null
+                            && mClipboardFixupxChip.getVisibility() == View.VISIBLE;
                     boolean keyboardVisible = mKeyboardButton != null && mKeyboardButton.getVisibility() == View.VISIBLE;
                     boolean rightVisible = mRightButton != null && mRightButton.getVisibility() == View.VISIBLE;
                     
@@ -499,7 +539,10 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
                         buttonsWidth += buttonWidth;
                     }
                     if (clipboardVisible) {
-                        buttonsWidth += clipboardChipWidthForLayout();
+                        buttonsWidth += clipboardChipWidthForLayout(mClipboardChip);
+                    }
+                    if (clipboardFixupxVisible) {
+                        buttonsWidth += clipboardChipWidthForLayout(mClipboardFixupxChip);
                     }
                     if (keyboardVisible) {
                         buttonsWidth += buttonWidth;
@@ -581,6 +624,10 @@ public class CandidateInInputViewContainer extends LinearLayout  implements View
         } else if (v == mClipboardChip) {
             if (mService != null) {
                 mService.pasteFromClipboardChip();
+            }
+        } else if (v == mClipboardFixupxChip) {
+            if (mService != null) {
+                mService.pasteFromClipboardFixupxChip();
             }
         } else if (v == mKeyboardButton) {
             // Restore keyboard view when keyboard button is clicked

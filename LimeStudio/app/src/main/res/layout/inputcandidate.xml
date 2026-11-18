@@ -100,6 +100,30 @@
                 android:textSize="@dimen/candidate_number_font_size" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/candidate_clipboard_fixupx"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:minWidth="@dimen/candidate_expand_button_width"
+            android:maxWidth="@dimen/candidate_clipboard_chip_max_width"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/candidate_clipboard_fixupx_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textSize="@dimen/candidate_number_font_size" />
+        </LinearLayout>
+
         <org.limeime.candidate.CandidateView
             android:id="@+id/candidatesView"
             android:layout_width="0dp"
